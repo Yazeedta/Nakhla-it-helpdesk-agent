@@ -110,6 +110,35 @@ def decide_policy(
         }
 
     # Remove duplicate document references
+    
+    # Rule 4: Engineering VPN escalation
+    # Engineering follows the normal VPN troubleshooting policy.
+    if dept == "engineering" and is_vpn:
+        decision["policy_refs"].extend(
+            ["KB-002", "KB-015", "KB-016"]
+        )
+
+        decision["check_service_status"] = True
+        decision["allow_vpn_troubleshooting"] = True
+
+        decision["required_actions"].append(
+            "Follow the applicable KB-002 troubleshooting steps. "
+            "Escalate if the problem remains unresolved."
+        )
+
+        # Standard single-user incident; major incidents are P1.
+        priority = (
+            "P1"
+            if affected_users is not None and affected_users > 3
+            else "P3"
+        )
+
+        decision["proposed_ticket"] = {
+            "category": "network_access",
+            "priority": priority,
+            "team": "Network Operations"
+        }
+
     decision["policy_refs"] = list(
         dict.fromkeys(decision["policy_refs"])
     )

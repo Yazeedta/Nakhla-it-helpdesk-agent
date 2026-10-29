@@ -121,4 +121,11 @@ with gr.Blocks(title="Nakhla IT Helpdesk") as demo:
     reject_btn.click(lambda h, s, p: decide(False, h, s, p), [chat, session, pending_state], outputs)
 
 if __name__ == "__main__":
-    demo.launch(server_port=int(os.getenv("UI_PORT", "7860")))
+    demo.launch(
+        server_port=int(os.getenv("UI_PORT", "7860")),
+        share=True,
+        auth=(
+            os.getenv("DEMO_USER", "demo"),
+            os.environ["DEMO_PASSWORD"]
+        )
+    )

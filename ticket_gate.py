@@ -263,6 +263,8 @@ async def draft_ticket(request: DraftRequest):
         }
 
     # Extract the error code, if present
+    
+    # Extract the error code, if present
     code_match = re.search(
         r"\bNX-\d+\b",
         question,
@@ -275,9 +277,51 @@ async def draft_ticket(request: DraftRequest):
         else "access issue"
     )
 
-    priority = (
-        "P1" if request.affected_users > 3 else "P2"
-    )
+    # Apply department-specific escalation rules
+    if department == "Finance":
+        category = "security"
+        priority = (
+            "P1" if request.affected_users > 3 else "P2"
+        )
+        kb_refs = ["KB-016", "KB-002"]
+
+        handling = (
+            "Finance VPN issues require direct escalation "
+            "to Security Operations without client troubleshooting."
+        )
+
+    else:
+        # Engineering: standard VPN escalation
+        category = "network_access"
+        priority = (
+            "P1" if request.affected_users > 3 else "P3"
+        )
+        kb_refs = ["KB-002", "KB-015", "KB-016"]
+
+        handling = (
+            "Engineering VPN issues follow standard "
+            "troubleshooting and escalation rules."
+        )
+
+    ticket = {
+        "subject": (
+            f"{department} VPN {code} - access problem"
+        ),
+        "description": (
+            f"Employee report: {question}\n"
+            f"Verified department: {department}.\n"
+            f"{handling}\n"
+            "The Helpdesk Agent checked the service status."
+        ),
+        "category": category,
+        "priority": priority,
+        "requester_email": email,
+        "department": department,
+        "attempted_steps": request.attempted_steps,
+        "kb_refs": kb_refs,
+        "affected_users": request.affected_users
+    }
+
 
     # Build the ticket using official schema fields
     ticket = {
