@@ -163,3 +163,46 @@ The case format and the API contract are described in the mini-project's `common
 | MCP tool returns `unreachable` | the API is not running, or `HELPDESK_API_URL` is wrong (in Docker use the service name) |
 | Everything fails with 503 | a fault is still armed: `curl.exe -X DELETE http://localhost:8102/admin/faults` |
 | Ticket ids keep growing | `POST /admin/reset` restores the seed state (tests do this before every case) |
+
+
+## Running the Nakhla IT Helpdesk Agent
+
+### Requirements
+- Python 3.12
+- Install dependencies with `pip install -r requirements.txt`
+- Configure `.env` using `.env.example`
+
+### Start the simulated Helpdesk API
+
+```powershell
+python -m uvicorn services.helpdesk_api:app --host 127.0.0.1 --port 8102
+```
+
+### Start the agent
+
+Open a second PowerShell terminal:
+
+```powershell
+$env:EVAL_ENABLE_WRITES = "1"
+python -m uvicorn agent_backend:app --host 127.0.0.1 --port 8000
+```
+
+The write flag is for isolated local course evaluation only. The approval endpoint requires a matching pending ticket draft before calling MCP create_ticket. This application is not production-authenticated and must not be publicly exposed.
+
+### Start the Gradio UI
+
+```powershell
+python ui/app_ui.py
+```
+
+### Run the sample evaluations
+
+```powershell
+python evals/run_evals.py --app http://127.0.0.1:8000
+```
+
+### Sample evaluation result
+
+10/10 cases passed without the optional LLM judge.
+
+The simulated helpdesk files under `services/` remain unchanged.
