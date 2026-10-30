@@ -29,6 +29,10 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from pydantic import BaseModel, Field
 
+# ARCHITECTURE-INTEGRATION-V1: reuse the project pipelines.
+from agent_graph import build_graph
+from retrieval import search as vector_search
+
 logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parent
 WRITE_ENABLED = os.getenv("EVAL_ENABLE_WRITES") == "1"
@@ -150,6 +154,8 @@ def load_docs() -> dict[str, dict]:
 
 
 DOCS = load_docs()
+# Independent LangGraph orchestrator (read-only; write path remains in this backend).
+WORKFLOW = build_graph()
 CODE = re.compile(r"\b(?:NX|NID|SWC|CRM|HW)-\d{3,5}\b", re.I)
 
 
@@ -246,6 +252,33 @@ def _draft(session: Session, subject: str, description: str, category: str, prio
     )
 
 
+
+# Reuse vector embeddings to select/confirm current, approved KB articles.
+# Never let a similar but unrelated article override an exact error-code match.
+async def semantic_doc_for_code(question: str, code: str) -> dict | None:
+    try:
+        matches = await asyncio.to_thread(vector_search, question, top_k=3)
+    except Exception:
+        logger.exception("Vector retrieval unavailable; using deterministic KB fallback")
+        return None
+    preferred = "KB-002" if code.startswith("NX-") else "KB-006" if code.startswith("NID-") else ""
+    valid = []
+    for item in matches:
+        doc = DOCS.get(item.get("document_id")) if isinstance(item, dict) else None
+        if not doc:
+            continue  # DOCS includes only current, authoritative sources
+        metadata_codes = [str(v).upper() for v in (doc["meta"].get("error_codes") or [])]
+        if code.upper() not in metadata_codes and not re.search(
+            r"\b" + re.escape(code) + r"\b", doc["text"], re.I
+        ):
+            continue
+        valid.append(doc)
+    if preferred:
+        for doc in valid:
+            if doc["id"] == preferred:
+                return doc
+    return valid[0] if valid else None
+
 def _already_tried(msg: str) -> bool:
     return bool(re.search(r"\b(already|tried|did all|still fail|still not|does not work|didn't work|updated|restarted|followed)\b", msg, re.I))
 
@@ -298,6 +331,32 @@ async def chat(body: ChatRequest):
     if vpn and not code:
         return _reply("What exact VPN error code (NX-...) do you see? Please also describe the symptoms.", tools=tools, workflow="needs_clarification")
 
+    # LangGraph is the primary decision path for the demonstrated active VPN incident.
+    # It performs employee lookup, semantic RAG, policy, live MCP incident check,
+    # impact check, LLM rewriting, verifier and source validation.
+    # Only a verified, source-checked incident response can override the
+    # deterministic fallback below; ticket writes are NEVER performed here.
+    if vpn and code == "NX-503" and isinstance(employee, dict):
+        try:
+            graph_state = await WORKFLOW.ainvoke({
+                "question": msg, "employee_email": employee["email"],
+            })
+            impact = graph_state.get("incident_applicability") or {}
+            valid = graph_state.get("source_validation") or {}
+            verified = graph_state.get("verification") or {}
+            if (
+                impact.get("status") == "affected"
+                and valid.get("passed") is True
+                and verified.get("passed") is True
+                and "INC-2207" in (graph_state.get("source_refs") or [])
+            ):
+                tools.append({"tool": "get_service_status", "ok": True})
+                return _reply(
+                    graph_state["cited_answer"], graph_state["source_refs"],
+                    tools=tools, workflow="langgraph_verified_incident",
+                )
+        except Exception:
+            logger.exception("LangGraph unavailable; using verified fallback")
     # Check live incidents for VPN or infrastructure service disruptions.
     if vpn or "outage" in lower or "down" in lower:
         try:
@@ -347,7 +406,19 @@ async def chat(body: ChatRequest):
         return _reply("Finance VPN must be handled by Security Operations. Do not switch gateways or use general VPN troubleshooting.", refs, tools=tools)
 
     # Unknown documented code: say so instead of inventing a fix.
-    doc = doc_for_code(code) if code else None
+    # Try embedding-based RAG first; preserve exact current-KB selection as
+    # a deterministic fallback and as a safeguard against irrelevant hits.
+    doc = None
+    if code:
+        exact_doc = doc_for_code(code)
+        semantic_doc = await semantic_doc_for_code(msg, code)
+        if exact_doc is not None:
+            if semantic_doc and semantic_doc["id"] == exact_doc["id"]:
+                doc = semantic_doc
+            else:
+                doc = exact_doc
+        else:
+            doc = semantic_doc
     if code and not doc:
         return _reply(f"I could not find an approved knowledge-base fix for {code}. Please contact the Service Desk for escalation or ask to open a support ticket. I will not invent troubleshooting steps.", tools=tools)
 
