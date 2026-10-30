@@ -6,7 +6,9 @@ It never talks to the helpdesk API or the LLM directly. It only calls your app:
 Run your app first (port 8000), then:   python ui/app_ui.py   ->  http://localhost:7860
 Replace it with your own UI if you like; keep the contract.
 """
+
 from __future__ import annotations
+from dotenv import load_dotenv
 
 import os
 import uuid
@@ -95,6 +97,18 @@ def decide(approved: bool, history: list, session_id: str, pending: dict | None)
     return show(data, history)
 
 
+# NAKHLA_MULTIUSER_MCP
+from demo_features import (
+    verify_demo_user, signed_in_account, my_ticket_history, my_ticket_details,
+    require_user,
+)
+
+
+def secure_send(message, history, session_id, _email, request: gr.Request):
+    # Gradio-authenticated identity, not the user-editable email box.
+    return send(message, history, session_id, require_user(request))
+
+
 with gr.Blocks(title="Nakhla IT Helpdesk") as demo:
     session = gr.State(lambda: f"ui-{uuid.uuid4().hex[:10]}")
     pending_state = gr.State(None)
@@ -116,16 +130,31 @@ with gr.Blocks(title="Nakhla IT Helpdesk") as demo:
             cites = gr.Markdown("### Sources\n_No answer yet._")
             tools = gr.Markdown("### Tool calls (last turn)\n_none_")
     outputs = [chat, pending_state, card, approve_btn, reject_btn, cites, tools, result]
-    msg.submit(send, [msg, chat, session, email], [msg, *outputs])
+    msg.submit(secure_send, [msg, chat, session, email], [msg, *outputs])
     approve_btn.click(lambda h, s, p: decide(True, h, s, p), [chat, session, pending_state], outputs)
     reject_btn.click(lambda h, s, p: decide(False, h, s, p), [chat, session, pending_state], outputs)
 
+    # NAKHLA_MULTIUSER_MCP: logged-in user and read-only ticket history.
+    signed_in = gr.Markdown("")
+    demo.load(signed_in_account, inputs=None, outputs=[email, signed_in])
+    with gr.Accordion("My Ticket History (MCP)", open=False):
+        gr.Markdown("Only tickets for the signed-in demo account can be requested.")
+        refresh_tickets = gr.Button("Refresh my tickets")
+        ticket_history_panel = gr.Markdown("Click Refresh to load ticket history via MCP.")
+        ticket_id_box = gr.Textbox(label="Ticket ID", placeholder="IT-1027")
+        load_ticket_details = gr.Button("View ticket details")
+        ticket_details_panel = gr.Markdown("")
+        refresh_tickets.click(my_ticket_history, inputs=None, outputs=ticket_history_panel)
+        load_ticket_details.click(my_ticket_details, inputs=[ticket_id_box], outputs=ticket_details_panel)
+
+
 if __name__ == "__main__":
-    demo.launch(
-        server_port=int(os.getenv("UI_PORT", "7860")),
-        share=True,
-        auth=(
-            os.getenv("DEMO_USER", "demo"),
-            os.environ["DEMO_PASSWORD"]
-        )
-    )
+    
+  load_dotenv()
+
+  demo.launch(
+    server_port=int(os.getenv("UI_PORT", "7860")),
+    share=True,
+    auth=verify_demo_user
+  )
+
