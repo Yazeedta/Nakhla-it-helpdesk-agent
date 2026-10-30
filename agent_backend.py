@@ -297,6 +297,12 @@ async def chat(body: ChatRequest):
     msg = body.message.strip()
     code_match = CODE.search(msg)
     code = code_match.group(0).upper() if code_match else session.last_error
+    
+    # Start a fresh issue context when the error code changes
+    if code_match and session.last_error and code != session.last_error:
+        session.turns.clear()
+        session.last_category = ""
+
     email = (body.user.email or "").strip().lower() if body.user else session.email
     if session.email and email and email != session.email:
         # Do not carry conversation history across different directory identities.
