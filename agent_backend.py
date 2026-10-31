@@ -324,7 +324,31 @@ async def chat(body: ChatRequest):
             tools.append({"tool": "lookup_employee", "ok": False})
     department = (employee or {}).get("department", "")
     lower = msg.lower()
-    vpn = "vpn" in lower or "nakhlaconnect" in lower or code.startswith("NX-") or session.last_category == "vpn"
+    # Answer employee profile questions without reusing an old issue.
+    profile_question = (
+        not code_match
+        and (
+            "employee record" in lower
+            or "my department" in lower
+            or "assigned vpn gateway" in lower
+            or "which vpn gateway" in lower
+        )
+    )
+    if profile_question:
+        session.turns.clear()
+        session.last_error = ""
+        session.last_category = ""
+        if not employee:
+            return _reply("I could not verify your employee record.", tools=tools)
+        vpn_data = employee.get("vpn") if isinstance(employee.get("vpn"), dict) else {}
+        gateway = (employee.get("vpn_gateway") or employee.get("gateway")
+                   or vpn_data.get("gateway"))
+        return _reply(
+            f"Department: {department or 'Not available'}\nAssigned VPN gateway: {gateway or 'Not available'}",
+            tools=tools, workflow="employee_lookup",
+        )
+
+    vpn = code.startswith("NX-") or (not code and ("vpn" in lower or "nakhlaconnect" in lower))
     if code_match:
         session.last_error = code
     session.last_category = "vpn" if vpn else "other"
@@ -443,7 +467,11 @@ async def chat(body: ChatRequest):
             cat, priority = "other", "P3"
         subject = f"{('VPN' if vpn else cat.title())} issue {code}".strip()
         attempted = ["User reports completing troubleshooting: " + msg] if _already_tried(msg) else ["Reported the issue; troubleshooting steps not confirmed"]
-        return _draft(session, subject, "\n".join(session.turns), cat, priority,
+        relevant = [t for t in session.turns if (m := CODE.search(t)) and m.group(0).upper() == code]
+        if not relevant or relevant[-1] != msg:
+            relevant.append(msg)
+        description = "\n".join(relevant[-4:])
+        return _draft(session, subject, description, cat, priority,
                       employee, refs, attempted, tools)
 
     if doc:

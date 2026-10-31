@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
   demo.launch(
     server_port=int(os.getenv("UI_PORT", "7860")),
-    share=True,
+    share=False,
     auth=verify_demo_user
   )
 
