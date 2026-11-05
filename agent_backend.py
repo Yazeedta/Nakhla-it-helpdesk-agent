@@ -323,6 +323,11 @@ async def chat(body: ChatRequest):
             logger.exception("Directory lookup failed")
             tools.append({"tool": "lookup_employee", "ok": False})
     department = (employee or {}).get("department", "")
+    # NAKHLA_MCP_TICKET_ROUTER_V1: read-only ticket intents before stale issue routing.
+    from ticket_memory_router import handle_ticket_query
+    routed = await handle_ticket_query(msg, email, employee, session, tools, mcp_call, _reply)
+    if routed is not None:
+        return routed
     lower = msg.lower()
     # Answer employee profile questions without reusing an old issue.
     profile_question = (

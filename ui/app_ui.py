@@ -137,15 +137,16 @@ with gr.Blocks(title="Nakhla IT Helpdesk") as demo:
     # NAKHLA_MULTIUSER_MCP: logged-in user and read-only ticket history.
     signed_in = gr.Markdown("")
     demo.load(signed_in_account, inputs=None, outputs=[email, signed_in])
-    with gr.Accordion("My Ticket History (MCP)", open=False):
+    # NAKHLA_LEGACY_HISTORY_DISABLED_V1
+    with gr.Accordion("My Ticket History (MCP)", open=False, visible=False):
         gr.Markdown("Only tickets for the signed-in demo account can be requested.")
         refresh_tickets = gr.Button("Refresh my tickets")
         ticket_history_panel = gr.Markdown("Click Refresh to load ticket history via MCP.")
         ticket_id_box = gr.Textbox(label="Ticket ID", placeholder="IT-1027")
         load_ticket_details = gr.Button("View ticket details")
         ticket_details_panel = gr.Markdown("")
-        refresh_tickets.click(my_ticket_history, inputs=None, outputs=ticket_history_panel)
-        load_ticket_details.click(my_ticket_details, inputs=[ticket_id_box], outputs=ticket_details_panel)
+        refresh_tickets.click(lambda: "Use Chat to ask for your ticket history.", inputs=None, outputs=ticket_history_panel, api_name=False)
+        load_ticket_details.click(lambda _tid: "Use Chat to ask for ticket details.", inputs=[ticket_id_box], outputs=ticket_details_panel, api_name=False)
 
 
 if __name__ == "__main__":
