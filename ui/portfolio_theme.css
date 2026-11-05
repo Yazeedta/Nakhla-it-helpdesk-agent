@@ -1,0 +1,28 @@
+/* Nakhla portfolio treatment. Presentation only; no change to authorization. */
+:root{--nakhla-ink:#0b1826;--nakhla-muted:#708196;--nakhla-line:#dce5eb;--nakhla-teal:#13b8a6}
+body,body.dark {background:#ecf3f5!important;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+.gradio-container {max-width:1480px!important;margin:auto!important;padding:24px 26px 46px!important;background:transparent!important}
+.nakhla-hero{position:relative;overflow:hidden;background:linear-gradient(110deg,#101d2e 0%,#16334a 68%,#1b5260 100%);border-radius:24px;min-height:236px;padding:34px 44px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:0 20px 40px rgba(11,24,38,.14)}
+.nakhla-hero::after{content:"";position:absolute;inset:auto -140px -220px auto;width:470px;height:470px;border:1px solid rgba(79,225,207,.25);border-radius:50%;box-shadow:0 0 0 60px rgba(81,220,207,.045),0 0 0 120px rgba(81,220,207,.03);pointer-events:none}
+.nakhla-hero-copy{position:relative;z-index:2;max-width:850px}
+.nakhla-eyebrow{font-size:11px;letter-spacing:2.2px;font-weight:750;color:#9eddd3;display:flex;align-items:center;margin-bottom:17px}
+.nakhla-pulse{width:8px;height:8px;background:#45dec7;display:inline-block;border-radius:50%;box-shadow:0 0 0 5px rgba(69,222,199,.13);margin-right:13px}
+.nakhla-hero-title{font-size:clamp(27px,3.7vw,48px);font-weight:780;letter-spacing:-1.8px;line-height:1.08}
+.nakhla-hero-title em{color:#65e5cb;font-style:normal}
+.nakhla-hero p{font-size:14px;color:#bdd1dd;line-height:1.65;max-width:600px;margin:13px 0 25px}
+.nakhla-hero-stats{display:flex;flex-wrap:wrap;gap:10px}
+.nakhla-hero-stats span{font-size:12px;color:#b2c6d1;border:1px solid rgba(195,233,232,.2);background:rgba(255,255,255,.055);padding:9px 13px;border-radius:8px}
+.nakhla-hero-stats strong{color:#fff;margin-right:5px;font-weight:800}
+.nakhla-hero-mark{position:relative;z-index:1;display:flex;flex-flow:column;align-items:center;justify-content:center;flex:0 0 130px;aspect-ratio:1/1;border-radius:30px;background:linear-gradient(145deg,rgba(102,232,215,.18),rgba(255,255,255,.03));border:1px solid rgba(147,232,230,.24);transform:rotate(-6deg)}
+.nakhla-hero-mark>span{font-size:77px;letter-spacing:-12px;line-height:1;font-weight:800}
+.nakhla-hero-mark-dot{color:#55dcc9}
+.nakhla-hero-mark small{font-size:10px;letter-spacing:3px;margin:6px 0 0 9px;color:#a2d8d1}
+.nakhla-context-note{padding:15px 5px 9px;font-size:10px;color:#72889a;letter-spacing:1.3px;font-weight:800}
+.nakhla-context-note span{color:#0ca999;padding:0 6px}
+.gradio-container .block,.gradio-container .form,.gradio-container .panel,.gradio-container .wrap{border-radius:14px!important}
+.gradio-container .block{box-shadow:0 6px 23px rgba(19,35,51,.04)}
+.gradio-container button.primary{border-radius:12px!important;background:#0fa997!important;border-color:#0fa997!important;color:#fff!important;font-weight:700!important}
+.gradio-container button.primary:hover{background:#078e7f!important}
+.gradio-container input,.gradio-container textarea{border-radius:10px!important}
+.gradio-container .prose h1,.gradio-container .prose h2,.gradio-container h1{letter-spacing:-.6px}
+@media(max-width:780px){.gradio-container{padding:12px!important}.nakhla-hero{padding:26px 23px;min-height:225px;border-radius:18px}.nakhla-hero-mark{display:none}.nakhla-hero-stats span{font-size:11px;padding:7px 9px}.nakhla-eyebrow{font-size:9px}}

@@ -109,7 +109,10 @@ def secure_send(message, history, session_id, _email, request: gr.Request):
     return send(message, history, session_id, require_user(request))
 
 
-with gr.Blocks(title="Nakhla IT Helpdesk") as demo:
+# NAKHLA_PORTFOLIO_VISUAL_V1
+import portfolio_theme as nakhla_theme
+with gr.Blocks(title="Nakhla IT Helpdesk", theme=nakhla_theme.theme(), css=nakhla_theme.CSS) as demo:
+    gr.HTML(nakhla_theme.HEADER)
     session = gr.State(lambda: f"ui-{uuid.uuid4().hex[:10]}")
     pending_state = gr.State(None)
     gr.Markdown("## Nakhla IT Helpdesk\nIT support assistant for Nakhla Systems (a fictional company). "
